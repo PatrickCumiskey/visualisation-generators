@@ -179,13 +179,16 @@ class GraphToSvg():
         
         dwg.add(rect)
 
-        if style['background'].get('image') is not None: 
-            path = style['background'].get('image')
-            img = Image(filename=path)
-            img_data = img.make_blob(format='png')
-            encoded = base64.b64encode(img_data).decode()
-            png_data = 'data:image/png;base64,{}'.format(encoded)
-            image = dwg.add(dwg.image(href=(png_data), insert=(0,0), size=dwg_size, opacity=style['background']['opacity']))
+        # I beleive this produces some sort of clear background, but needs the iamge wand libray which i 
+        # failed ot get running on my local machine, do not need clear backgorund, remmoving as not needed
+        # if style['background'].get('image') is not None:
+        #     path = style['background'].get('image')
+        #     img = Image(filename=path)
+        #     img_data = img.make_blob(format='png')
+        #     encoded = base64.b64encode(img_data).decode()
+        #     png_data = 'data:image/png;base64,{}'.format(encoded)
+        #     image = dwg.add(
+        #         dwg.image(href=(png_data), insert=(0, 0), size=dwg_size, opacity=style['background']['opacity']))
             
 
         ## Scale the graph to fit the svg canvas

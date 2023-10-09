@@ -44,9 +44,12 @@ def calculate_control_points(start, end):
     c1 = p1.buffer(length * multiplier).boundary
     c2 = p2.buffer(length * multiplier).boundary
     i = c1.intersection(c2)
-    
-    if len(i) > 0:
-        return (i[0].coords[0], i[1].coords[0])
+
+    # Encouted issue when running on local machine where the orginal code did not have .geoms, but it was needed.
+    # This could be an environemnt, libray or newer vesion of python issue, but this change is needed to plot points
+    # In a graph locally without it throwing an error.
+    if len(i.geoms) > 0:
+        return (i.geoms[0].coords[0], i.geoms[1].coords[0])
     else:
         return (start, end)
 

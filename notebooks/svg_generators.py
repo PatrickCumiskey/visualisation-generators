@@ -8,7 +8,7 @@ from geomdl import BSpline
 from geomdl import utilities
 import numpy as np
 from IPython.display import display_svg, SVG
-# COuld not get this libraby to run locally, removing as not needed for usecase
+# Could not get this libraby to run locally, removing as not needed for usecase
 # from wand.image import Image
 
 

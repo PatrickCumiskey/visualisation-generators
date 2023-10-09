@@ -4,11 +4,11 @@
 
 NOTE: This respoity is a minor adaptation of https://github.com/chronotopic-cartographies/visualisation-generators , allowable under GPL, referenced and forked with same license permissions. We highly reccomened you use the online notebok editor to run the code, as the changes in this fork only pertain to generating the final graph as an image. 
 
-We enconuted issues with the image wand libray and could not get it isntalled, and further issues when converting the graphs to images with how the geometric object was referenced, as such we needed to make minor changes. 
+We enconutered issues with the image wand libray and could not get it installed on our own machines, and further issues when converting the graphs to images with how the geometric object was referenced, as such we needed to make minor changes. 
 
-We beleive the issues reovled out a differnece in environemnts. Most likely a minor difference in the version of a libray or of the python version, but we were not able to determeine the exact root cause, but implemented out own minor fix that solves the issue, 
+We beleive the issue was one of a differnece in environemnts. Most likely a minor difference in the version of a libray or of the python version, but we were not able to determeine the exact root cause, but implemented oue own minor fix that solves the issue. 
 
-We also added a TestVisual.py file , this filw allows the quick conversion and viewing of a .graphmhl file to an svg, allowing it to be viewed in your python cdoe ediotr of choice. This is merely here for quick iterations of parameter fine tuning. 
+We also added a test_visual.py file , this file allows the quick conversion and viewing of a .graphmhl file to an svg, allowing it to be viewed in your python cdoe ediotr of choice. This is merely here for quick iterations of parameter fine tuning. 
 
 
 This repository contains marked up texts, visualisations, and Python scripts for generating visualisations related to the AHRC-funded [*Chronotopic Cartographies for Literature*](https://www.lancaster.ac.uk/chronotopic-cartographies/) project at Lancaster University. 

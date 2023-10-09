@@ -8,7 +8,8 @@ from geomdl import BSpline
 from geomdl import utilities
 import numpy as np
 from IPython.display import display_svg, SVG
-from wand.image import Image
+# COuld not get this libray running locally, removing for usecase as not needed
+# from wand.image import Image
 
 def calculate_edge_offset(line_start, line_end, node_size):
     """Calculate where to start an edge, factoring in the size of the node with which it connects"""

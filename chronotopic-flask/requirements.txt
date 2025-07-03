@@ -1,0 +1,7 @@
+Flask==3.0.0
+lxml==4.9.3
+svgwrite==1.4.3
+shapely==2.0.2
+geomdl==5.3.1
+numpy==1.26.2
+werkzeug==3.0.1

@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Validate XML - Chronotopic Cartographies{% endblock %}
+
+{% block extra_css %}
+<style>
+    textarea {
+        width: 100%;
+        min-height: 400px;
+        font-family: 'Courier New', monospace;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 1rem;
+        font-size: 14px;
+    }
+    button {
+        background-color: #333;
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 4px;
+        font-size: 16px;
+        cursor: pointer;
+        margin-top: 1rem;
+    }
+    button:hover {
+        background-color: #555;
+    }
+    button:disabled {
+        background-color: #999;
+        cursor: not-allowed;
+    }
+    #results {
+        margin-top: 2rem;
+    }
+    .error-item, .warning-item {
+        margin-bottom: 0.5rem;
+        padding: 0.75rem;
+        border-radius: 4px;
+    }
+    .error-item {
+        background-color: #fee;
+        border-left: 4px solid #c33;
+    }
+    .warning-item {
+        background-color: #ffc;
+        border-left: 4px solid #fc9;
+    }
+    .line-number {
+        font-weight: bold;
+        color: #666;
+    }
+    #loading {
+        display: none;
+        margin-top: 1rem;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>XML Validator</h1>
+<p>Paste your Chronotopic Cartographies XML markup below to validate it for errors.</p>
+
+<form id="validate-form">
+    <textarea name="xml_content" id="xml_content" placeholder="Paste your XML here..."></textarea>
+    <button type="submit" id="validate-btn">Validate XML</button>
+    <div id="loading">Validating...</div>
+</form>
+
+<div id="results"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('validate-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const btn = document.getElementById('validate-btn');
+    const loading = document.getElementById('loading');
+    const results = document.getElementById('results');
+    const xmlContent = document.getElementById('xml_content').value;
+    
+    if (!xmlContent.trim()) {
+        results.innerHTML = '<div class="alert alert-error">Please enter XML content to validate.</div>';
+        return;
+    }
+    
+    btn.disabled = true;
+    loading.style.display = 'block';
+    results.innerHTML = '';
+    
+    try {
+        const response = await fetch('/validate-xml', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `xml_content=${encodeURIComponent(xmlContent)}`
+        });
+        
+        const data = await response.json();
+        
+        if (data.errors && data.errors.length > 0) {
+            let html = '<h2>Validation Results</h2>';
+            
+            const errors = data.errors.filter(e => e.type === 'error');
+            const warnings = data.errors.filter(e => e.type === 'warning');
+            
+            if (errors.length > 0) {
+                html += `<div class="alert alert-error">Found ${errors.length} error(s)</div>`;
+                html += '<h3>Errors</h3>';
+                errors.forEach(error => {
+                    html += `<div class="error-item">`;
+                    if (error.line) {
+                        html += `<span class="line-number">Line ${error.line}:</span> `;
+                    }
+                    html += `${error.message}</div>`;
+                });
+            }
+            
+            if (warnings.length > 0) {
+                html += `<div class="alert alert-warning">Found ${warnings.length} warning(s)</div>`;
+                html += '<h3>Warnings</h3>';
+                warnings.forEach(warning => {
+                    html += `<div class="warning-item">`;
+                    if (warning.line) {
+                        html += `<span class="line-number">Line ${warning.line}:</span> `;
+                    }
+                    html += `${warning.message}</div>`;
+                });
+            }
+            
+            if (errors.length === 0 && warnings.length === 0) {
+                html = '<div class="alert alert-success">XML is valid! No errors or warnings found.</div>';
+            }
+            
+            results.innerHTML = html;
+        } else {
+            results.innerHTML = '<div class="alert alert-success">XML is valid! No errors or warnings found.</div>';
+        }
+    } catch (error) {
+        results.innerHTML = `<div class="alert alert-error">Error: ${error.message}</div>`;
+    } finally {
+        btn.disabled = false;
+        loading.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

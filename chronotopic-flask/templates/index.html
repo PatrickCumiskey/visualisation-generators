@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Chronotopic Cartographies Tools</h1>
+
+<div style="margin-top: 2rem;">
+    <h2>Available Tools</h2>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem;">
+        <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3>XML Validator</h3>
+            <p>Validate your Chronotopic Cartographies XML markup for errors and warnings.</p>
+            <a href="/validate-xml" style="display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background-color: #333; color: white; text-decoration: none; border-radius: 4px;">Validate XML →</a>
+        </div>
+        
+        <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3>GraphML Visualizer</h3>
+            <p>Upload GraphML files from Gephi and generate customized SVG visualizations.</p>
+            <a href="/visualize" style="display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background-color: #333; color: white; text-decoration: none; border-radius: 4px;">Visualize GraphML →</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -44,7 +44,23 @@ def visualize_page():
                 'curved': request.form.get('curved', 'true') == 'true',
                 'label_position': request.form.get('label_position', 'below'),
                 'node_scale': float(request.form.get('node_scale', 1.0)),
-                'color_scheme': request.form.get('color_scheme', 'color')
+                'color_scheme': request.form.get('color_scheme', 'color'),
+                'edge_width': float(request.form.get('edge_width', 1.0)),
+                'show_arrows': request.form.get('show_arrows', 'false') == 'true',
+                'node_opacity': float(request.form.get('node_opacity', 1.0)),
+                'edge_opacity': float(request.form.get('edge_opacity', 1.0)),
+                'label_size': float(request.form.get('label_size', 0.6)),
+                'background_color': request.form.get('background_color', '#525252'),
+                'node_stroke_width': int(request.form.get('node_stroke_width', 2)),
+                'node_stroke_color': request.form.get('node_stroke_color', '#ffffff'),
+                'label_color': request.form.get('label_color', '#dbdbdb'),
+                'show_shadows': request.form.get('show_shadows', 'false') == 'true',
+                'show_grid': request.form.get('show_grid', 'false') == 'true',
+                'grid_size': int(request.form.get('grid_size', 50)),
+                'export_scale': float(request.form.get('export_scale', 1.0)),
+                'curve_strength': float(request.form.get('curve_strength', 0.6)),
+                'node_shape': request.form.get('node_shape', 'circle'),
+                'symbol_color': request.form.get('symbol_color', '#000000')
             }
             
             try:

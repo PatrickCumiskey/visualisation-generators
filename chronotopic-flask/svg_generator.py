@@ -25,13 +25,13 @@ def calculate_edge_offset(line_start, line_end, node_size):
     except:
         return p.coords[0]
 
-def calculate_control_points(start, end):
+def calculate_control_points(start, end, curve_strength=0.6):
     """Calculate control points for curved edges"""
     length = math.sqrt((start[0] - end[0])**2 + (start[1] - end[1])**2)
     p1 = Point(start[0], start[1])
     p2 = Point(end[0], end[1])
     
-    multiplier = 0.6
+    multiplier = curve_strength
     
     c1 = p1.buffer(length * multiplier).boundary
     c2 = p2.buffer(length * multiplier).boundary
@@ -49,7 +49,7 @@ def calculate_control_points(start, end):
             pass
         return (start, end)
 
-def draw_curved_path(dwg, start, end, edge_style):
+def draw_curved_path(dwg, start, end, edge_style, edge_width_multiplier=1.0, edge_opacity=1.0, curve_strength=0.6):
     """Draw a curved path between two points"""
     start_str = f"{start[0]},{start[1]}"
     end_str = f"{end[0]},{end[1]}"
@@ -61,7 +61,8 @@ def draw_curved_path(dwg, start, end, edge_style):
             'd': f'M{start_str}',
             'stroke': edge_style['stroke-case-color'],
             'fill': 'none',
-            'stroke_width': edge_style['stroke-case']
+            'stroke_width': edge_style['stroke-case'] * edge_width_multiplier,
+            'opacity': edge_opacity
         }
         if edge_style['stroke-dasharray'] is not None:
             case_attrs['stroke_dasharray'] = edge_style['stroke-dasharray']
@@ -72,14 +73,15 @@ def draw_curved_path(dwg, start, end, edge_style):
         'd': f'M{start_str}',
         'stroke': edge_style['stroke'],
         'fill': 'none',
-        'stroke_width': edge_style['stroke-width']
+        'stroke_width': edge_style['stroke-width'] * edge_width_multiplier,
+        'opacity': edge_opacity
     }
     if edge_style['stroke-dasharray'] is not None:
         path_attrs['stroke_dasharray'] = edge_style['stroke-dasharray']
     path = dwg.path(**path_attrs)
     
     # Calculate control points for curve
-    control_points = calculate_control_points(start, end)
+    control_points = calculate_control_points(start, end, curve_strength)
     
     # Create B-spline curve
     curve = BSpline.Curve()
@@ -98,6 +100,69 @@ def draw_curved_path(dwg, start, end, edge_style):
             case.push(f'L {pt[0]},{pt[1]}')
     
     return case, path
+
+def draw_node_shape(dwg, x, y, size, shape='circle', fill='white', stroke='black', stroke_width=2, opacity=1.0):
+    """Draw different node shapes"""
+    if shape == 'circle':
+        return dwg.circle(center=(x, y), r=size, fill=fill, stroke=stroke, stroke_width=stroke_width, opacity=opacity)
+    elif shape == 'square':
+        return dwg.rect(insert=(x - size, y - size), size=(size * 2, size * 2), fill=fill, stroke=stroke, stroke_width=stroke_width, opacity=opacity)
+    elif shape == 'diamond':
+        points = [(x, y - size), (x + size, y), (x, y + size), (x - size, y)]
+        return dwg.polygon(points=points, fill=fill, stroke=stroke, stroke_width=stroke_width, opacity=opacity)
+    elif shape == 'hexagon':
+        angle = math.pi / 3
+        points = []
+        for i in range(6):
+            px = x + size * math.cos(i * angle - math.pi / 6)
+            py = y + size * math.sin(i * angle - math.pi / 6)
+            points.append((px, py))
+        return dwg.polygon(points=points, fill=fill, stroke=stroke, stroke_width=stroke_width, opacity=opacity)
+    else:
+        return dwg.circle(center=(x, y), r=size, fill=fill, stroke=stroke, stroke_width=stroke_width, opacity=opacity)
+
+def colorize_svg(svg_content, new_color):
+    """Colorize an SVG by replacing fill colors with a new color"""
+    from lxml import etree as svg_etree
+    try:
+        # Parse the SVG
+        parser = svg_etree.XMLParser(remove_blank_text=True)
+        root = svg_etree.fromstring(svg_content.encode(), parser)
+        
+        # Find all elements with fill attribute
+        for elem in root.iter():
+            # Skip if element has no attributes
+            if elem.attrib is None:
+                continue
+                
+            # Update fill color if it's not 'none' or transparent
+            if 'fill' in elem.attrib:
+                current_fill = elem.attrib['fill'].lower()
+                if current_fill not in ['none', 'transparent', 'rgba(0,0,0,0)']:
+                    elem.attrib['fill'] = new_color
+                    
+            # Update stroke color for certain elements
+            if 'stroke' in elem.attrib:
+                current_stroke = elem.attrib['stroke'].lower()
+                if current_stroke not in ['none', 'transparent', 'rgba(0,0,0,0)']:
+                    elem.attrib['stroke'] = new_color
+                    
+            # Handle style attribute
+            if 'style' in elem.attrib:
+                style = elem.attrib['style']
+                # Replace fill colors in style
+                import re
+                style = re.sub(r'fill:\s*#[0-9a-fA-F]{6}', f'fill:{new_color}', style)
+                style = re.sub(r'fill:\s*#[0-9a-fA-F]{3}', f'fill:{new_color}', style)
+                style = re.sub(r'stroke:\s*#[0-9a-fA-F]{6}', f'stroke:{new_color}', style)
+                style = re.sub(r'stroke:\s*#[0-9a-fA-F]{3}', f'stroke:{new_color}', style)
+                elem.attrib['style'] = style
+        
+        # Return the modified SVG as string
+        return svg_etree.tostring(root, encoding='unicode')
+    except:
+        # If colorization fails, return original
+        return svg_content
 
 class GraphMLToSVG:
     """Convert GraphML files to SVG visualizations"""
@@ -166,16 +231,52 @@ class GraphMLToSVG:
         label_position = settings.get('label_position', 'below')
         node_scale = settings.get('node_scale', 1.0)
         color_scheme = settings.get('color_scheme', 'color')
+        edge_width_multiplier = settings.get('edge_width', 1.0)
+        show_arrows = settings.get('show_arrows', False)
+        node_opacity = settings.get('node_opacity', 1.0)
+        edge_opacity = settings.get('edge_opacity', 1.0)
+        label_size = settings.get('label_size', 0.6)
+        background_color = settings.get('background_color', '#525252')
+        node_stroke_width = settings.get('node_stroke_width', 2)
+        node_stroke_color = settings.get('node_stroke_color', '#ffffff')
+        label_color = settings.get('label_color', '#dbdbdb')
+        show_shadows = settings.get('show_shadows', False)
+        show_grid = settings.get('show_grid', False)
+        grid_size = settings.get('grid_size', 50)
+        export_scale = settings.get('export_scale', 1.0)
+        curve_strength = settings.get('curve_strength', 0.6)
+        node_shape = settings.get('node_shape', 'circle')
+        symbol_color = settings.get('symbol_color', '#000000')
         
         # Use appropriate style
         style = colour_style if color_scheme == 'color' else print_style
         
         # Create SVG
-        dwg_size = int(size)
+        dwg_size = int(size * export_scale)
         dwg = svgwrite.Drawing(size=(dwg_size, dwg_size))
         
         # Background
-        dwg.add(dwg.rect(insert=(0, 0), size=(dwg_size, dwg_size), fill=style['background']['color']))
+        dwg.add(dwg.rect(insert=(0, 0), size=(dwg_size, dwg_size), fill=background_color))
+        
+        # Add grid if enabled
+        if show_grid:
+            grid_group = dwg.add(dwg.g(opacity=0.2))
+            grid_step = grid_size * export_scale
+            for i in range(0, dwg_size + int(grid_step), int(grid_step)):
+                grid_group.add(dwg.line(start=(i, 0), end=(i, dwg_size), stroke='white', stroke_width=1))
+                grid_group.add(dwg.line(start=(0, i), end=(dwg_size, i), stroke='white', stroke_width=1))
+        
+        # Add shadow filter if enabled
+        if show_shadows:
+            defs = dwg.add(dwg.defs())
+            shadow_filter = defs.add(dwg.filter(id='shadow'))
+            shadow_filter.add(dwg.feGaussianBlur(in_='SourceAlpha', stdDeviation=3))
+            shadow_filter.add(dwg.feOffset(dx=2, dy=2, result='offsetblur'))
+            shadow_filter.add(dwg.feFlood(flood_color='#000000', flood_opacity=0.3))
+            shadow_filter.add(dwg.feComposite(in2='offsetblur', operator='in'))
+            feMerge = shadow_filter.add(dwg.feMerge())
+            feMerge.add(dwg.feMergeNode())
+            feMerge.add(dwg.feMergeNode(in_='SourceGraphic'))
         
         # Calculate bounds and scale
         if self.nodes:
@@ -233,7 +334,7 @@ class GraphMLToSVG:
                     
                     if edge_style:
                         if curved:
-                            case, path = draw_curved_path(dwg, start, end, edge_style)
+                            case, path = draw_curved_path(dwg, start, end, edge_style, edge_width_multiplier, edge_opacity, curve_strength)
                             if case:
                                 edges_group.add(case)
                             edges_group.add(path)
@@ -243,7 +344,8 @@ class GraphMLToSVG:
                                 'start': start,
                                 'end': end,
                                 'stroke': edge_style['stroke'],
-                                'stroke_width': edge_style['stroke-width']
+                                'stroke_width': edge_style['stroke-width'] * edge_width_multiplier,
+                                'opacity': edge_opacity
                             }
                             if edge_style['stroke-dasharray']:
                                 line_attrs['stroke_dasharray'] = edge_style['stroke-dasharray']
@@ -251,12 +353,14 @@ class GraphMLToSVG:
         
         # Draw nodes
         nodes_group = dwg.add(dwg.g())
+        if show_shadows:
+            nodes_group['filter'] = 'url(#shadow)'
         for node_id, node_data in self.nodes.items():
             x = node_data.get('x', 0)
             y = node_data.get('y', 0)
             
             # Get node properties
-            size_val = float(node_data.get('size', node_data.get('d3', 10))) * node_scale
+            size_val = float(node_data.get('size', node_data.get('d3', 10))) * node_scale * export_scale
             
             # Find node style by searching through all node data values
             node_style = None
@@ -272,44 +376,54 @@ class GraphMLToSVG:
                 # Default style
                 node_style = {'color': '#cccccc', 'symbol': None}
             
-            # Draw node background circle
-            nodes_group.add(dwg.circle(
-                center=(x, y),
-                r=size_val,
+            # Draw node background shape
+            nodes_group.add(draw_node_shape(
+                dwg, x, y, size_val, 
+                shape=node_shape,
                 fill=style['background']['color'],
-                stroke='none'
+                stroke='none',
+                opacity=1.0
             ))
             
             # Draw symbol if available, otherwise draw colored circle
             if node_style.get('symbol'):
                 try:
                     symbol_path = os.path.join(os.path.dirname(__file__), node_style['symbol'])
-                    with open(symbol_path, 'rb') as file:
-                        img = file.read()
-                        encoded = base64.b64encode(img).decode()
-                        svgdata = f'data:image/svg+xml;base64,{encoded}'
-                        nodes_group.add(dwg.image(
-                            href=svgdata,
-                            insert=(x - size_val, y - size_val),
-                            size=(size_val * 2, size_val * 2)
-                        ))
+                    with open(symbol_path, 'r') as file:
+                        svg_content = file.read()
+                    
+                    # Colorize the SVG if a custom color is specified
+                    if symbol_color != '#000000':
+                        svg_content = colorize_svg(svg_content, symbol_color)
+                    
+                    # Encode as base64
+                    encoded = base64.b64encode(svg_content.encode()).decode()
+                    svgdata = f'data:image/svg+xml;base64,{encoded}'
+                    nodes_group.add(dwg.image(
+                        href=svgdata,
+                        insert=(x - size_val, y - size_val),
+                        size=(size_val * 2, size_val * 2),
+                        opacity=node_opacity
+                    ))
                 except:
-                    # Fallback to colored circle if symbol not found
-                    nodes_group.add(dwg.circle(
-                        center=(x, y),
-                        r=size_val,
+                    # Fallback to colored shape if symbol not found
+                    nodes_group.add(draw_node_shape(
+                        dwg, x, y, size_val,
+                        shape=node_shape,
                         fill=node_style['color'],
-                        stroke='white',
-                        stroke_width=2
+                        stroke=node_stroke_color,
+                        stroke_width=node_stroke_width,
+                        opacity=node_opacity
                     ))
             else:
-                # Draw colored circle
-                nodes_group.add(dwg.circle(
-                    center=(x, y),
-                    r=size_val,
+                # Draw colored shape
+                nodes_group.add(draw_node_shape(
+                    dwg, x, y, size_val,
+                    shape=node_shape,
                     fill=node_style['color'],
-                    stroke='white',
-                    stroke_width=2
+                    stroke=node_stroke_color,
+                    stroke_width=node_stroke_width,
+                    opacity=node_opacity
                 ))
             
             # Add label
@@ -324,8 +438,8 @@ class GraphMLToSVG:
                 insert=(x, label_y),
                 text_anchor='middle',
                 font_family=style['label']['font-family'],
-                font_size=f"{style['label']['size']}em",
-                fill=style['label']['fill']
+                font_size=f"{label_size}em",
+                fill=label_color
             ))
         
         # Return SVG as string
